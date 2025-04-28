@@ -15,10 +15,6 @@
 #--------------------------------------------------------------------
 
 CI_ENVIRONMENT = development
-STRAVA_CLIENT_ID = '61250'
-STRAVA_CLIENT_SECRET = '182e5f3778d2e77350848e3a204b45a52a23de56'
-STRAVA_VERIFY_TOKEN = 'MySuperSe111cretWebhookTokenForStravaApp123!'
-STRAVA_WEBHOOK_CALLBACK_URL = 'https://webhook.site/e7da6b08-64be-4e29-9078-6d45938baf7c'
 
 #--------------------------------------------------------------------
 # APP
