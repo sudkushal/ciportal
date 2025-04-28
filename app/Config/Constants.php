@@ -82,4 +82,4 @@ defined('EXIT__AUTO_MAX')      || define('EXIT__AUTO_MAX', 125);    // highest a
 defined('STRAVA_CLIENT_ID')            || define('STRAVA_CLIENT_ID', '61250');
 defined('STRAVA_CLIENT_SECRET')        || define('STRAVA_CLIENT_SECRET', '182e5f3778d2e77350848e3a204b45a52a23de56');
 defined('STRAVA_VERIFY_TOKEN')         || define('STRAVA_VERIFY_TOKEN', 'MySuperSe111cretWebhookTokenForStravaApp123!');
-defined('STRAVA_WEBHOOK_CALLBACK_URL') || define('STRAVA_WEBHOOK_CALLBACK_URL', 'https://webhook.site/e7da6b08-64be-4e29-9078-6d45938baf7c');
+defined('STRAVA_WEBHOOK_CALLBACK_URL') || define('STRAVA_WEBHOOK_CALLBACK_URL', 'https://ciportal-c1fc18d75d54.herokuapp.com/webhook/strava');
