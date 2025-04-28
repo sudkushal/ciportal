@@ -16,7 +16,8 @@ class App extends BaseConfig
      *
      * E.g., http://example.com/
      */
-    public string $baseURL = 'http://localhost/ciportal/';
+    //public string $baseURL = 'http://localhost/ciportal/';
+    public string $baseURL = 'https://ciportal-c1fc18d75d54.herokuapp.com/';
 
     /**
      * Allowed Hostnames in the Site URL other than the hostname in the baseURL.
