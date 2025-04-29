@@ -33,9 +33,9 @@
         <div class="container mx-auto px-6 py-3 flex justify-between items-center">
             <div class="text-2xl font-bold text-indigo-600">100 Days Challenge</div>
             <div>
-                <button class="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 ease-in-out disabled:opacity-50" disabled>
-                    Login with Strava (Coming Soon)
-                </button>
+            <a href="<?= site_url('strava/login') ?>" class="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 ease-in-out inline-block">
+    Login with Strava
+</a>
             </div>
         </div>
     </nav>
