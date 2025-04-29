@@ -24,7 +24,6 @@ defined('APP_NAMESPACE') || define('APP_NAMESPACE', 'App');
  | the vendor folder is in the Root directory, but you can customize that here.
  */
 defined('COMPOSER_PATH') || define('COMPOSER_PATH', ROOTPATH . 'vendor/autoload.php');
-defined('CI_ENVIRONMENT') or define('CI_ENVIRONMENT', 'development');
 
 /*
  |--------------------------------------------------------------------------
@@ -78,8 +77,3 @@ defined('EXIT_USER_INPUT')     || define('EXIT_USER_INPUT', 7);     // invalid u
 defined('EXIT_DATABASE')       || define('EXIT_DATABASE', 8);       // database error
 defined('EXIT__AUTO_MIN')      || define('EXIT__AUTO_MIN', 9);      // lowest automatically-assigned error code
 defined('EXIT__AUTO_MAX')      || define('EXIT__AUTO_MAX', 125);    // highest automatically-assigned error code
-
-defined('STRAVA_CLIENT_ID')            || define('STRAVA_CLIENT_ID', '61250');
-defined('STRAVA_CLIENT_SECRET')        || define('STRAVA_CLIENT_SECRET', '182e5f3778d2e77350848e3a204b45a52a23de56');
-defined('STRAVA_VERIFY_TOKEN')         || define('STRAVA_VERIFY_TOKEN', 'MySuperSe111cretWebhookTokenForStravaApp123!');
-defined('STRAVA_WEBHOOK_CALLBACK_URL') || define('STRAVA_WEBHOOK_CALLBACK_URL', 'https://ciportal-c1fc18d75d54.herokuapp.com/webhook/strava');

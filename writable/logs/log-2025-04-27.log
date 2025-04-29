@@ -1,7 +1,0 @@
-CRITICAL - 2025-04-27 06:57:23 --> STRAVA_CLIENT_ID is not set in .env file. Cannot initiate Strava login.
-CRITICAL - 2025-04-27 06:59:29 --> STRAVA_CLIENT_ID is not set in .env file. Cannot initiate Strava login.
-CRITICAL - 2025-04-27 06:59:49 --> STRAVA_CLIENT_ID is not set in .env file. Cannot initiate Strava login.
-CRITICAL - 2025-04-27 07:00:15 --> STRAVA_CLIENT_ID is not set in .env file. Cannot initiate Strava login.
-ERROR - 2025-04-27 07:04:48 --> Failed to create/verify Strava webhook subscription via API. Status: 400, Message: Bad Request, Errors: [{"resource":"PushSubscription","field":"callback url","code":"not verifiable"}], Response Body: {"message":"Bad Request","errors":[{"resource":"PushSubscription","field":"callback url","code":"not verifiable"}]}
-ERROR - 2025-04-27 07:08:31 --> Failed to create/verify Strava webhook subscription via API. Status: 400, Message: Bad Request, Errors: [{"resource":"PushSubscription","field":"callback url","code":"not verifiable"}], Response Body: {"message":"Bad Request","errors":[{"resource":"PushSubscription","field":"callback url","code":"not verifiable"}]}
-ERROR - 2025-04-27 07:22:23 --> Failed to create/verify Strava webhook subscription via API using constants. Status: 400, Message: Bad Request, Errors: [{"resource":"PushSubscription","field":"callback url","code":"not verifiable"}], Response Body: {"message":"Bad Request","errors":[{"resource":"PushSubscription","field":"callback url","code":"not verifiable"}]}
