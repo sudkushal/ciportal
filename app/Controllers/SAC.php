@@ -7,15 +7,11 @@ use App\Models\UserModel; // Import the UserModel
 use CodeIgniter\Controller;
 use Config\Services; // Import Services to use HTTP Client
 
-class StravaAuthController extends BaseController // Extend BaseController for helpers like session, redirect
+class SAC extends BaseController // Extend BaseController for helpers like session, redirect
 {
-    /**
-     * Initiates the Strava OAuth2 authorization flow.
-     * Fetches credentials, builds the authorization URL, and redirects the user.
-     */
+
     public function login()
     {
-        print_r("<pre>this is sudarshan </pre>"); 
         // Load session helper if not autoloaded
         // helper('session'); // Usually autoloaded or available via BaseController
 
@@ -24,6 +20,7 @@ class StravaAuthController extends BaseController // Extend BaseController for h
 
         // Fetch the 'default' Strava API credentials from the database
         $credentials = $stravaConfigModel->getCredentials('default');
+//        echo "get here"; exit;
 
         // --- Error Handling: Check if credentials were found ---
         if (!$credentials || empty($credentials->client_id) || empty($credentials->client_secret)) {
