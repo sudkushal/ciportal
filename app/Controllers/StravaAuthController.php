@@ -15,6 +15,7 @@ class StravaAuthController extends BaseController // Extend BaseController for h
      */
     public function login()
     {
+        print_r("<pre>this is sudarshan </pre>"); 
         // Load session helper if not autoloaded
         // helper('session'); // Usually autoloaded or available via BaseController
 

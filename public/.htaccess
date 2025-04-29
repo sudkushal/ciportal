@@ -1,49 +1,68 @@
-# Disable directory browsing
-Options -Indexes
+# In public/.htaccess
+
+# Disable directory browsing and MultiViews (recommended for CI4)
+Options -Indexes -MultiViews
+
+# Enable symbolic links securely (needed for mod_rewrite)
+Options +FollowSymlinks
+
+# Turn on the rewrite engine
+RewriteEngine On
 
 # ----------------------------------------------------------------------
-# Rewrite engine
+# Security Rules
 # ----------------------------------------------------------------------
 
-# Turning on the rewrite engine is necessary for the following rules and features.
-# FollowSymLinks must be enabled for this to work.
-<IfModule mod_rewrite.c>
-	Options +FollowSymlinks
-	RewriteEngine On
+# Deny access to framework system folders
+# Adjust paths if your structure is different
+RewriteRule ^(app|system|tests|writable|vendor)/ [F,L]
 
-	# If you installed CodeIgniter in a subfolder, you will need to
-	# change the following line to match the subfolder you need.
-	# http://httpd.apache.org/docs/current/mod/mod_rewrite.html#rewritebase
-	# RewriteBase /
+# Deny access to files starting with a dot (.htaccess, .env, .git, etc.)
+# Ensure this rule is applied correctly in the context of the public directory
+RewriteCond %{REQUEST_URI} /.*\/\. [OR]
+RewriteCond %{REQUEST_URI} \/\.
+RewriteRule .* - [F,L]
 
-	# Redirect Trailing Slashes...
-	RewriteCond %{REQUEST_FILENAME} !-d
-	RewriteCond %{REQUEST_URI} (.+)/$
-	RewriteRule ^ %1 [L,R=301]
+# ----------------------------------------------------------------------
+# Redirection Rules
+# ----------------------------------------------------------------------
 
-	# Rewrite "www.example.com -> example.com"
-	RewriteCond %{HTTPS} !=on
-	RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
-	RewriteRule ^ http://%1%{REQUEST_URI} [R=301,L]
+# Redirect Trailing Slashes If Not A Folder... (Kept from your version)
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} (.+)/$
+RewriteRule ^ %1 [L,R=301]
 
-	# Checks to see if the user is attempting to access a valid file,
-	# such as an image or css document, if this isn't true it sends the
-	# request to the front controller, index.php
-	RewriteCond %{REQUEST_FILENAME} !-f
-	RewriteCond %{REQUEST_FILENAME} !-d
-	RewriteRule ^([\s\S]*)$ index.php/$1 [L,NC,QSA]
+# Optional: Redirect www to non-www AND force HTTPS (Example - uncomment and adapt if needed)
+# Note: Heroku often handles HTTPS at the load balancer. Check if needed.
+# RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC,OR]
+# RewriteCond %{HTTPS} off
+# RewriteCond %{HTTP_HOST} ^(?:www\.)?(.+)$ [NC]
+# RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
 
-	# Ensure Authorization header is passed along
-	RewriteCond %{HTTP:Authorization} .
-	RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-</IfModule>
 
-<IfModule !mod_rewrite.c>
-	# If we don't have mod_rewrite installed, all 404's
-	# can be sent to index.php, and everything works as normal.
-	ErrorDocument 404 index.php
-</IfModule>
+# ----------------------------------------------------------------------
+# Pass Authorization Header to PHP
+# ----------------------------------------------------------------------
+# Ensures the Authorization header (e.g., for API Bearer tokens) is available to PHP
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-# Disable server signature start
+
+# ----------------------------------------------------------------------
+# Front Controller (Standard CI4 Pattern)
+# ----------------------------------------------------------------------
+# Send request via index.php (query string method) if file/directory doesn't exist
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?/$1 [L,QSA]
+
+
+# ----------------------------------------------------------------------
+# Server Signature (Kept from your version)
+# ----------------------------------------------------------------------
 ServerSignature Off
-# Disable server signature end
+
+# Fallback for missing mod_rewrite (Optional, often unnecessary if mod_rewrite is present)
+# <IfModule !mod_rewrite.c>
+#    ErrorDocument 404 /index.php
+# </IfModule>
