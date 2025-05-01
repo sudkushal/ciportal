@@ -17,8 +17,6 @@
 CI_ENVIRONMENT = development
 app.debug = true
 
-session.driver = DatabaseHandler
-session.savePath = ci_sessions # The name of the database table
 
 #--------------------------------------------------------------------
 # APP
