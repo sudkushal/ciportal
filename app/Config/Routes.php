@@ -18,3 +18,5 @@ $routes->get('/login', 'AuthController::login');         // To start the login p
 $routes->get('/auth/callback', 'AuthController::callback'); // Strava redirects back here
 $routes->get('/logout', 'AuthController::logout');        // To log the user out
 
+// Route for the points leaderboard
+$routes->get('/leaderboard', 'PointsController::index');

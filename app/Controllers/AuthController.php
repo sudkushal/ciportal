@@ -4,7 +4,9 @@ namespace App\Controllers;
 
 use App\Models\StravaConfigModel; // Model to get Client ID/Secret
 use App\Models\UserModel;         // Model to save user data
+use App\Models\ActivityModel;     // Model to save activity data
 use Config\Services;              // To use HTTP Client, session, etc.
+use CodeIgniter\I18n\Time;        // To handle time/dates for fetching activities
 
 class AuthController extends BaseController
 {
@@ -58,10 +60,13 @@ class AuthController extends BaseController
         $code = $this->request->getGet('code');
         $receivedState = $this->request->getGet('state');
         $error = $this->request->getGet('error');
+        $scope = $this->request->getGet('scope'); // Scope granted by user
 
         // 2. Validate State (CSRF protection) and check for errors
         $storedState = session()->get('oauth_state');
         session()->remove('oauth_state'); // Remove state once used
+
+        log_message('debug', "Callback received. Code: {$code}, State: {$receivedState}, Scope: {$scope}, Error: {$error}");
 
         if (!empty($error)) {
             log_message('error', 'Strava callback error: ' . $error);
@@ -72,7 +77,7 @@ class AuthController extends BaseController
             return redirect()->to('/')->with('error', 'Strava authorization failed (missing code).');
         }
         if (empty($receivedState) || $receivedState !== $storedState) {
-            log_message('error', 'Strava callback state mismatch.');
+            log_message('error', 'Strava callback state mismatch. Received: ' . $receivedState . ' Expected: ' . $storedState);
             return redirect()->to('/')->with('error', 'Invalid security token. Please try logging in again.');
         }
 
@@ -86,14 +91,15 @@ class AuthController extends BaseController
 
         // Use CodeIgniter's HTTP Client service
         $httpClient = Services::curlrequest([
-            // No base_uri needed here as we use the full URL below
-            'timeout' => 10,
+            'timeout' => 15, // Increased timeout slightly for potentially slower network
         ]);
         // Use the FULL URL for the token endpoint
         $tokenUrl = 'https://www.strava.com/api/v3/oauth/token';
+        $accessToken = null; // Initialize access token variable
+        $tokenData = null;   // Initialize token data variable
 
         try {
-             log_message('debug', 'Attempting POST to Strava token URL: ' . $tokenUrl);
+            log_message('debug', 'Attempting POST to Strava token URL: ' . $tokenUrl);
             // Make POST request using the absolute $tokenUrl
             $response = $httpClient->post($tokenUrl, [
                 'form_params' => [
@@ -115,10 +121,13 @@ class AuthController extends BaseController
             }
 
             $tokenData = json_decode($body);
-            if (json_last_error() !== JSON_ERROR_NONE || !isset($tokenData->access_token) || !isset($tokenData->athlete)) {
-                log_message('error', 'Failed to parse Strava token response: ' . json_last_error_msg() . ' | Body: ' . $body);
+            // Check for JSON errors and essential data presence
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($tokenData->access_token) || !isset($tokenData->athlete) || !isset($tokenData->refresh_token) || !isset($tokenData->expires_at)) {
+                log_message('error', 'Failed to parse Strava token response or missing essential data: ' . json_last_error_msg() . ' | Body: ' . $body);
                 return redirect()->to('/')->with('error', 'Error processing Strava response.');
             }
+            $accessToken = $tokenData->access_token; // Store access token for activity fetch
+            $tokenData->scope = $scope; // Add granted scope to token data
 
         } catch (\Exception $e) {
             // Log the full exception message and code
@@ -130,8 +139,7 @@ class AuthController extends BaseController
         $userModel = new UserModel();
         $stravaAthlete = $tokenData->athlete; // Get athlete data from token response
 
-        // Prepare data for the user model's findOrCreate method
-        // Note: findOrCreate needs to handle inserting/updating based on strava_id
+        // Pass the athlete object and full token data to findOrCreate
         $userId = $userModel->findOrCreate($stravaAthlete, $tokenData);
 
         if (!$userId) {
@@ -139,24 +147,109 @@ class AuthController extends BaseController
             return redirect()->to('/')->with('error', 'Failed to save user information.');
         }
 
-        // 5. Set User Session
-        $user = $userModel->find($userId); // Fetch the saved user data
+        // --- 5. Fetch and Sync Activities ---
+        // Check if activity scope was granted and we have a token
+        // Use str_contains for PHP 8+ or strpos for PHP 7
+        $activityScopeGranted = $scope && (function_exists('str_contains') ? str_contains($scope, 'activity:read') : strpos($scope, 'activity:read') !== false);
+
+        if ($accessToken && $activityScopeGranted) {
+            $activityModel = new ActivityModel();
+            $activitiesApiUrl = 'https://www.strava.com/api/v3/athlete/activities';
+
+            // Define time range for fetching activities (e.g., last 30 days)
+            // Adjust 'before' and 'after' as needed for your challenge logic
+            $fetchBefore = Time::now()->getTimestamp(); // Current time
+            $fetchAfter = Time::now()->subDays(365)->getTimestamp(); // 30 days ago (adjust as needed)
+
+            // Strava API allows fetching up to 200 activities per page
+            $perPage = 100; // Fetch 100 activities per request (adjust as needed)
+            $page = 1;
+            $allActivities = [];
+
+            log_message('info', "Fetching activities for user ID {$userId} between " . Time::createFromTimestamp($fetchAfter)->toDateTimeString() . " and " . Time::createFromTimestamp($fetchBefore)->toDateTimeString());
+
+            // Loop to fetch pages of activities until no more are returned
+            do {
+                $fetchedActivities = []; // Reset for each page
+                try {
+                    $activityResponse = $httpClient->get($activitiesApiUrl, [
+                        'headers' => [
+                            'Authorization' => 'Bearer ' . $accessToken,
+                        ],
+                        'query' => [
+                            'before'   => $fetchBefore,
+                            'after'    => $fetchAfter,
+                            'page'     => $page,
+                            'per_page' => $perPage,
+                        ],
+                        'http_errors' => false,
+                    ]);
+
+                    $activityStatusCode = $activityResponse->getStatusCode();
+                    $activityBody = $activityResponse->getBody();
+
+                    if ($activityStatusCode === 200) {
+                        $fetchedActivities = json_decode($activityBody);
+                        if (json_last_error() === JSON_ERROR_NONE && is_array($fetchedActivities)) {
+                            $allActivities = array_merge($allActivities, $fetchedActivities);
+                            log_message('debug', "Fetched page {$page} with " . count($fetchedActivities) . " activities for user ID {$userId}.");
+                            $page++; // Prepare for next page
+                        } else {
+                            log_message('error', "Failed to parse activities response (page {$page}) for user ID {$userId}. Body: " . $activityBody);
+                            $fetchedActivities = []; // Stop fetching if parse error
+                        }
+                    } elseif ($activityStatusCode === 401 || $activityStatusCode === 403) {
+                         log_message('error', "Authorization error fetching activities (page {$page}) for user ID {$userId}. Status: {$activityStatusCode}. Token might be invalid or scope insufficient.");
+                         $fetchedActivities = []; // Stop fetching on auth errors
+                    } else {
+                        log_message('error', "Failed to fetch activities (page {$page}) for user ID {$userId}. Status: {$activityStatusCode}, Body: " . $activityBody);
+                        $fetchedActivities = []; // Stop fetching on other errors
+                    }
+                } catch (\Exception $e) {
+                    log_message('error', "Exception fetching activities (page {$page}) for user ID {$userId}: " . $e->getMessage());
+                    $fetchedActivities = []; // Stop fetching on exception
+                }
+                // Add a small delay to be kind to the API, especially if fetching many pages
+                if (!empty($fetchedActivities)) {
+                    usleep(200000); // 200 milliseconds delay
+                }
+            } while (!empty($fetchedActivities) && count($fetchedActivities) === $perPage); // Continue if last page was full
+
+            // Sync all fetched activities to the database
+            if (!empty($allActivities)) {
+                $syncResults = $activityModel->syncActivities($userId, $allActivities);
+                // Optional: Store sync results in flashdata if needed
+                // session()->setFlashdata('sync_results', $syncResults);
+            } else {
+                 log_message('info', "No new activities found to sync for user ID {$userId} in the specified range.");
+            }
+
+        } else {
+            log_message('warning', 'Skipping activity sync because access token was not obtained or activity:read scope not granted for user ID ' . $userId . '. Scope: ' . $scope);
+        }
+
+
+        // --- 6. Set User Session ---
+        $user = $userModel->find($userId); // Re-fetch user data to ensure it's current
         if (!$user) {
              log_message('error', 'Failed to retrieve newly saved user from DB. ID: ' . $userId);
              return redirect()->to('/')->with('error', 'Session setup error.');
         }
 
+        // Set session data needed for the application
         $sessionData = [
             'user_id'             => $user->id, // Your app's user ID
             'strava_id'           => $user->strava_id,
             'firstname'           => $user->firstname,
+            'lastname'            => $user->lastname,
+            'profile_picture_url' => $user->profile_picture_url,
             'isLoggedIn'          => true,
         ];
         session()->set($sessionData);
-        log_message('info', 'User session created for user ID: ' . $userId);
+        log_message('info', 'User session created for user ID: ' . $userId . ' after activity sync attempt.');
 
-        // 6. Redirect to Dashboard
-        return redirect()->to('/dashboard'); // Or wherever logged-in users should go
+        // --- 7. Redirect to Dashboard ---
+        return redirect()->to('/dashboard'); // Redirect to the user's dashboard page
     }
 
     /**
