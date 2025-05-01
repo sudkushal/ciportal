@@ -11,10 +11,10 @@ $routes->get('/', 'Home::index');
 
 
 // Dashboard route (requires user to be logged in - handled by controller)
-$routes->get('/dashboard', 'App\Controllers\DashboardController::index');
+$routes->get('/dashboard', 'DashboardController::index');
 
-// Logout route
-$routes->get('/logout', 'App\Controllers\DashboardController::logout');
+// Routes for the simple AuthController
+$routes->get('/login', 'AuthController::login');         // To start the login process
+$routes->get('/auth/callback', 'AuthController::callback'); // Strava redirects back here
+$routes->get('/logout', 'AuthController::logout');        // To log the user out
 
-$routes->get('/login', 'SAC::login');
-$routes->get('strava/callback', 'SAC::callback');
