@@ -1,0 +1,10 @@
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/your_cpanel_username/public_html/   # <-- IMPORTANT: Replace with the ABSOLUTE path to your web root
+    - /bin/cp -R public/* $DEPLOYPATH                            # Copy contents of public/
+    - /bin/cp public/.htaccess $DEPLOYPATH                       # Ensure .htaccess is copied
+    # Add any other build/deployment steps here if needed
+    # Example: Install composer dependencies if you don't have SSH access
+    # - /usr/local/bin/composer install --no-dev --optimize-autoloader
+    # Example: Run migrations (Requires database config to be ready)
+    # - php spark migrate --force
