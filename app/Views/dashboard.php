@@ -64,32 +64,31 @@
                  <div class="bg-white p-6 rounded-lg shadow-md">
                     <h2 class="text-xl font-semibold mb-4 border-b pb-2">Overall Standings</h2>
 
-                    <?php // Check if rank and points variables are set and rank is not null
-                        if (isset($currentUserRank) && $currentUserRank !== null && isset($currentUserPoints)): ?>
+                    <?php if (isset($currentUserRank) && $currentUserRank !== null && isset($currentUserPoints)): ?>
                         <p class="text-gray-700 mb-1">
                             Your Rank: <span class="font-bold text-indigo-600 text-lg"><?= esc($currentUserRank) ?></span>
                         </p>
                         <p class="text-gray-700 mb-4">
-                            Your Points: <span class="font-bold text-indigo-600 text-lg"><?= esc(number_format($currentUserPoints, 2)) ?></span>
+                            Your Total Points: <span class="font-bold text-indigo-600 text-lg"><?= esc(number_format($currentUserPoints, 2)) ?></span>
                         </p>
                     <?php else: ?>
-                         <p class="text-gray-600 mb-4">Your rank will appear here once you have synced activities with points.</p>
+                         <p class="text-gray-600 mb-4">Your rank and points will appear here once you have synced activities.</p>
                     <?php endif; ?>
 
-                    <a href="<?= site_url('/leaderboard') // Ensure this points to your leaderboard route ?>" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 ease-in-out inline-block w-full text-center">
+                    <a href="<?= site_url('/leaderboard') ?>" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 ease-in-out inline-block w-full text-center">
                         View Full Leaderboard
                     </a>
                 </div>
             </div>
 
 
-            <div class="md:col-span-2">
+            <div class="md:col-span-2 space-y-8">
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <h2 class="text-xl font-semibold mb-4 border-b pb-2">Recent Activities</h2>
 
-                    <?php // Check if the $activities variable exists, is an array, and is not empty
-                          if (!empty($activities) && is_array($activities)): ?>
-                        <div class="overflow-x-auto"> <table class="min-w-full divide-y divide-gray-200">
+                    <?php if (!empty($activities) && is_array($activities)): ?>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
                                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
@@ -102,23 +101,12 @@
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     <?php foreach ($activities as $activity): ?>
                                         <?php
+                                            // Format data (same as before)
                                             $distance_km = round(($activity->distance ?? 0) / 1000, 2);
                                             $moving_time_formatted = gmdate("H:i:s", $activity->moving_time ?? 0);
                                             $activity_date = 'N/A';
-                                            $dateToParse = $activity->start_date ?? null; // Use UTC start_date
-                                            if (!empty($dateToParse)) {
-                                                $timestamp = strtotime($dateToParse);
-                                                if ($timestamp !== false) {
-                                                    try {
-                                                        $dateTimeObject = new \DateTime('@' . $timestamp);
-                                                        // Optional: Adjust timezone here if needed before formatting
-                                                        // $timezoneStr = $activity->timezone ?? 'UTC';
-                                                        // if (preg_match('/\)\s*(.*)$/', $timezoneStr, $matches)) { $tzIdentifier = trim($matches[1]); } else { $tzIdentifier = $timezoneStr; }
-                                                        // if (@timezone_open($tzIdentifier)) { $dateTimeObject->setTimezone(new \DateTimeZone($tzIdentifier)); }
-                                                        $activity_date = $dateTimeObject->format('M j, Y g:i A'); // Include time
-                                                    } catch (\Exception $e) { log_message('error', 'Exception formatting timestamp: '.$timestamp.' | '.$e->getMessage()); $activity_date = 'Error'; }
-                                                } else { log_message('warning', 'strtotime failed for date string: ' . $dateToParse); $activity_date = 'Invalid Date'; }
-                                            }
+                                            $dateToParse = $activity->start_date ?? null;
+                                            if (!empty($dateToParse)) { $timestamp = strtotime($dateToParse); if ($timestamp !== false) { try { $dateTimeObject = new \DateTime('@' . $timestamp); $activity_date = $dateTimeObject->format('M j, Y g:i A'); } catch (\Exception $e) { log_message('error', 'Exception formatting timestamp: '.$timestamp.' | '.$e->getMessage()); $activity_date = 'Error'; } } else { log_message('warning', 'strtotime failed for date string: ' . $dateToParse); $activity_date = 'Invalid Date'; } }
                                         ?>
                                         <tr class="activity-row transition duration-150 ease-in-out">
                                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600"><?= esc($activity_date) ?></td>
@@ -137,11 +125,48 @@
                         </div>
                     <?php else: ?>
                         <p class="text-gray-600">No recent activities found or synced yet.</p>
-                        <p class="text-gray-500 text-sm mt-2">Activities might take a moment to sync after your first login, or you may not have recent activities on Strava.</p>
                     <?php endif; ?>
-
                 </div>
-            </div> </div> </div> <footer class="bg-gray-800 text-gray-400 py-8 mt-16">
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold mb-4 border-b pb-2">Points Breakdown</h2>
+
+                    <?php if (isset($pointsBreakdown) && !empty($pointsBreakdown)): ?>
+                        <div class="space-y-4">
+                            <?php foreach ($pointsBreakdown as $stageNum => $stageData): ?>
+                                <?php if (!empty($stageData)): // Only show stages where points were potentially earned ?>
+                                <div class="border border-gray-200 p-3 rounded">
+                                    <h3 class="text-lg font-medium text-gray-800 mb-2">Stage <?= esc($stageNum) ?>: <span class="text-indigo-600"><?= esc(number_format($stageData['total_stage_points'] ?? 0, 2)) ?> pts</span></h3>
+                                    <ul class="list-disc list-inside text-sm text-gray-600 space-y-1 pl-2">
+                                        <?php if (isset($stageData['daily']) && $stageData['daily'] > 0): ?>
+                                            <li>Daily Challenge: <?= esc(number_format($stageData['daily'], 2)) ?> pts</li>
+                                        <?php endif; ?>
+                                        <?php if (isset($stageData['advanced']) && $stageData['advanced'] > 0): ?>
+                                            <li>Advanced Challenge: <?= esc(number_format($stageData['advanced'], 2)) ?> pts</li>
+                                        <?php endif; ?>
+                                        <?php if (isset($stageData['extreme']) && $stageData['extreme'] > 0): ?>
+                                            <li>Extreme Challenge: <?= esc(number_format($stageData['extreme'], 2)) ?> pts</li>
+                                        <?php endif; ?>
+                                         <?php if (isset($stageData['distance']) && $stageData['distance'] > 0): ?>
+                                            <li>Distance Challenge: <?= esc(number_format($stageData['distance'], 2)) ?> pts</li>
+                                        <?php endif; ?>
+                                        <?php if (empty(array_filter($stageData, fn($v) => $v > 0 && $v !== $stageData['total_stage_points']))): // Check if only total is set or all sub-challenges are 0 ?>
+                                            <?php if (($stageData['total_stage_points'] ?? 0) == 0): ?>
+                                                <li>No challenge points earned this stage.</li>
+                                            <?php else: ?>
+                                                 <li>(Breakdown details not available or points not from sub-challenges)</li>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                    </ul>
+                                </div>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <p class="text-gray-600">Points breakdown will appear here once you complete challenge activities.</p>
+                    <?php endif; ?>
+                    <p class="text-xs text-gray-500 mt-4">Note: Points for Daily/Advanced challenges are awarded based on qualifying activities after meeting the minimum day requirement for the stage.</p>
+                </div> </div> </div> </div> <footer class="bg-gray-800 text-gray-400 py-8 mt-16">
         <div class="container mx-auto px-6 text-center">
             <p>&copy; <span id="current-year"></span> 100 Days Challenge. All rights reserved.</p>
             <script>
